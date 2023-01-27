@@ -72,13 +72,41 @@ struct point navigation(int statregie)
 {
 
 }
-
-struct cmd pilotage(struct point waypoint)
+struct cmd pilotage(struct point waypoint, float Vent)
 {
-    struct cmd pilote;  
+    struct cmd pilote;
 
-    pilote.safran = ;
-    pilote.voile = ;
+    //Commande de la voile
+    pilote.voile = 0;
+    if(Vent > 180)
+    {
+        Vent = Vent - 180;
+    }
+
+    if(Vent >= 150)
+    {
+        pilote.voile = 90;
+    }
+    else if(Vent >= 55 && Vent < 150)
+    {
+        pilote.voile = (15/19) * Vent -(540/19);
+    }
+    else if(Vent >= 15 && Vent < 55)
+    {
+        pilote.voile = 15;
+    }
+    else if(Vent >= 0 && Vent < 15)
+    {
+        pilote.voile = Vent;
+    }
+
+    //Commande du safran
+    pilote.safran = 0;
+
+
+
+
+    
 
     return pilote;
 }
@@ -87,7 +115,7 @@ int main(void)
 {
     struct point Bouee = {-20, 20};
     struct point Mat = {0, 0};
-
+    //Les angles sont donnés sur [0, 360]
     float VentMatAvant = 60.26;
     float NordMatAvant = 326.54;
 
@@ -107,7 +135,6 @@ int main(void)
         printf("decision_strategie : nominal\n");
         break;
     
-
     default:
         printf("decision_strategie : valeur de retour inconnue\n");
         break;
