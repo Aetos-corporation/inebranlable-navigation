@@ -45,7 +45,6 @@ int decision_strategie(struct point Bouee, struct point Mat, float VMA, float NM
     NordMatBouee = acosf(NordMatBouee)*180/M_PI;
 
     // printf("NordMatBouee = %f\n", NordMatBouee);
-
     float VentMatBouee;
     VentMatBouee = VMA - (NordMatBouee - NMA);
 
@@ -55,7 +54,6 @@ int decision_strategie(struct point Bouee, struct point Mat, float VMA, float NM
     }
 
     // printf("VentMatBouee = %f\n", VentMatBouee);
-
     if(VentMatBouee < 30 || VentMatBouee > 330)
     {
         retour = 1;
@@ -75,12 +73,18 @@ struct point navigation(int statregie)
 struct cmd pilotage(struct point waypoint, float Vent)
 {
     struct cmd pilote;
+    pilote.voile = 0;
+    pilote.safran = 0;
 
     //Commande de la voile
-    pilote.voile = 0;
+    float Vent_Voile;
     if(Vent > 180)
     {
-        Vent = Vent - 180;
+        Vent_Voile = 360 - Vent;
+    }
+    else 
+    {
+        Vent_Voile = Vent;
     }
 
     if(Vent >= 150)
@@ -100,13 +104,10 @@ struct cmd pilotage(struct point waypoint, float Vent)
         pilote.voile = Vent;
     }
 
-    //Commande du safran
-    pilote.safran = 0;
+    //Commande du safran entre -30° et +30°
+    //Utilisation du PID
 
 
-
-
-    
 
     return pilote;
 }
@@ -115,6 +116,7 @@ int main(void)
 {
     struct point Bouee = {-20, 20};
     struct point Mat = {0, 0};
+
     //Les angles sont donnés sur [0, 360]
     float VentMatAvant = 60.26;
     float NordMatAvant = 326.54;
