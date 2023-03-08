@@ -53,6 +53,37 @@ float pid(float input, float setpoint)
     return output;
 }
 
+float calcul_angle_voile(float VentMatAvant)
+{
+    float cmd_voile = 0;
+    if(VentMatAvant > 180)
+    {
+        VentMatAvant = 360 - VentMatAvant;
+    }
+    else 
+    {
+        VentMatAvant = VentMatAvant;
+    }
+
+    if(VentMatAvant >= 150)
+    {
+        cmd_voile = 90;
+    }
+    else if(VentMatAvant >= 55 && VentMatAvant < 150)
+    {
+        cmd_voile = (15.0 / 19.0) * VentMatAvant - (540.0 / 19.0);
+    }
+    else if(VentMatAvant >= 15 && VentMatAvant < 55)
+    {
+        cmd_voile = 15;
+    }
+    else if(VentMatAvant >= 0 && VentMatAvant < 15)
+    {
+        cmd_voile = VentMatAvant;
+    }
+
+    return cmd_voile;
+}
 
 // Fonction qui calcule l'angle du safran à l'aide des paramètres suivants :
 // struc point waypoint : coordonnées de la bouée 
@@ -79,21 +110,50 @@ float calcul_angle_safran(struct point waypoint, struct point bateau, float bate
     float AvantMatWaypoint = NordMatWaypoint - bateau_orientation;
     printf("angle_bateau_waypoint = %f\n", AvantMatWaypoint);
 
-    // Calcul des écarts en x et en y entre la bouée et le bateau
-    float delta_x = waypoint.x - bateau.x;
-    float delta_y = waypoint.y - bateau.y;
+    float cmd_safran = 0;
 
-    // Calcul de l'angle entre le bateau et la bouée
-    float angle_bateau_waypoint = atan2(delta_y, delta_x) * 180.0 / M_PI; // convertir en degrés
-    float erreur_angle = angle_bateau_waypoint - bateau_orientation;
+    if(AvantMatWaypoint > 180)
+    {
+        AvantMatWaypoint = 360 - AvantMatWaypoint;
+    }
+    else if(AvantMatWaypoint < -180) 
+    {
+        AvantMatWaypoint = AvantMatWaypoint + 360;
+    }
 
-    printf("angle_bateau_waypoint = %f\n", angle_bateau_waypoint);
-    printf("erreur_angle = %f\n", erreur_angle);
+    if(AvantMatWaypoint > -180 && AvantMatWaypoint <= -120 )
+    {
+        cmd_safran = 15 ;
+    }
+    else if(AvantMatWaypoint > -120 && AvantMatWaypoint <= -30)
+    {
+        cmd_safran = 8 ;
+    }
+    else if(AvantMatWaypoint > -30 && AvantMatWaypoint <= -5)
+    {
+        cmd_safran = 2 ;
+    }
+    else if(AvantMatWaypoint > -5 && AvantMatWaypoint < 5)
+    {
+        cmd_safran = 0 ;
+    }
+    else if(AvantMatWaypoint > 5 && AvantMatWaypoint <= 30)
+    {
+        cmd_safran = -2 ;
+    }
+    else if(AvantMatWaypoint > 30 && AvantMatWaypoint <= 120)
+    {
+        cmd_safran = -8 ;
+    }
+    else if(AvantMatWaypoint > 120 && AvantMatWaypoint <= 180)
+    {
+        cmd_safran = -15 ;
+    }
 
     // Utilisation du PID
-    float angle_safran = pid(erreur_angle, 0.0); // setpoint = 0.0 pour réguler l'erreur à zéro
+    //cmd_safran = pid(cmd_safran, 0.0); // setpoint = 0.0 pour réguler l'erreur à zéro
 
-    return angle_safran;
+    return cmd_safran;
 }
 
 
@@ -153,33 +213,8 @@ struct cmd pilotage(struct point waypoint, struct point bateau, float VMA, float
     pilote.voile = 0;
     pilote.safran = 0;
 
-    //Commande de la voile
-    float Vent_Voile;
-    if(VMA > 180)
-    {
-        Vent_Voile = 360 - VMA;
-    }
-    else 
-    {
-        Vent_Voile = VMA;
-    }
-
-    if(VMA >= 150)
-    {
-        pilote.voile = 90;
-    }
-    else if(VMA >= 55 && VMA < 150)
-    {
-        pilote.voile = (15/19) * VMA -(540/19);
-    }
-    else if(VMA >= 15 && VMA < 55)
-    {
-        pilote.voile = 15;
-    }
-    else if(VMA >= 0 && VMA < 15)
-    {
-        pilote.voile = VMA;
-    }
+    //Commande de la voile entre 0° et 90°
+    pilote.voile = calcul_angle_voile(VMA);
 
     //Commande du safran entre -30° et +30°
     pilote.safran = calcul_angle_safran(waypoint, bateau, NMA);
@@ -238,15 +273,15 @@ int main(void)
     printf("************************************\n\n");
   
     // Positions de l'objectif et du bateau 
-    Bouee.x= 0;
-    Bouee.y = 20;
+    Bouee.x= 6;
+    Bouee.y = 5;
     
     Mat.x= 0;
     Mat.y = 0;
 
     //Les angles sont donnés sur [0, 360]
-    VentMatAvant = 180;
-    NordMatAvant = 0;
+    VentMatAvant = 135;
+    NordMatAvant = 180;
 
     struct cmd pilotage_bateau = pilotage(Bouee, Mat, VentMatAvant, NordMatAvant);
 
