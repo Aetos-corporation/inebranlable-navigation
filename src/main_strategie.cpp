@@ -1,4 +1,6 @@
 #include "include/strategie.h"
+#include "include/pilotage.h"
+#include "include/navigation.h"
 
 int main(void)
 {
