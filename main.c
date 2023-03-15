@@ -40,6 +40,38 @@ float calcul_norme_vecteur(struct vecteur V)
     return norme;
 }
 
+// Fonction qui calcule l'angle entre le Nord, le bateau et la bouée :
+// [IN] struc point waypoint : coordonnées de la bouée 
+// [IN] struc point bateau : les coordonnées du bateau 
+// [OUT] float NordMatWaypoint : angle Nord Bateau Bouée
+float calcul_angle_NordMatWaypoint(struct point waypoint, struct point bateau)
+{
+    struct vecteur MatNord = {0, 1};
+    struct vecteur MatWaypoint;
+    MatWaypoint.x = waypoint.x - bateau.x;
+    MatWaypoint.y = waypoint.y - bateau.y;
+
+    float NordMatWaypoint;
+    float scalaire = (MatNord.x * MatWaypoint.x) + (MatNord.y * MatWaypoint.y);
+
+    float normeMB = calcul_norme_vecteur(MatWaypoint);
+    float normeMN = calcul_norme_vecteur(MatNord);
+
+    NordMatWaypoint = scalaire/(normeMB * normeMN);
+    NordMatWaypoint = acosf(NordMatWaypoint)*180/M_PI;
+
+    float produit_vectoriel = (MatNord.x * MatWaypoint.y) - (MatNord.y * MatWaypoint.x);
+
+    if(produit_vectoriel < 0)
+    {
+        NordMatWaypoint = 360 - NordMatWaypoint;
+    }
+
+    // printf("NordMatWaypoint = %f\n", NordMatWaypoint);
+
+    return NordMatWaypoint;
+}
+
 // Fonction qui calcule la commande du PID pour une erreur donnée en entrée. 
 // Les coefficients proportionnel, intégral et dérivé sont définis en tant que constantes.
 float pid(float input, float setpoint)
@@ -53,6 +85,10 @@ float pid(float input, float setpoint)
     return output;
 }
 
+// Fonction qui calcule l'angle de la voile
+// [IN] float VentMatAvant : angle qui donne la provenance du vent par rapport au bateau 
+//                              180 = vente arrière
+// [OUT] float cmd_voile : commande d'angle à adopter à la voile
 float calcul_angle_voile(float VentMatAvant)
 {
     float cmd_voile = 0;
@@ -85,30 +121,19 @@ float calcul_angle_voile(float VentMatAvant)
     return cmd_voile;
 }
 
-// Fonction qui calcule l'angle du safran à l'aide des paramètres suivants :
-// struc point waypoint : coordonnées de la bouée 
-// struc point bateau : les coordonnées du bateau 
-// float bateau_orientation : orientation du bateau en degrés par rapport au nord
+// Fonction qui calcule l'angle du safran
+// [IN] struc point waypoint : coordonnées de la bouée 
+// [IN] struc point bateau : les coordonnées du bateau 
+// [IN] float bateau_orientation : orientation du bateau en degrés par rapport au nord
+// [OUT] float cmd_safran : commande d'angle à adopter au safran
 float calcul_angle_safran(struct point waypoint, struct point bateau, float bateau_orientation)
 {
 
-    struct vecteur MatNord = {0, 1};
-    struct vecteur MatWaypoint;
-    MatWaypoint.x = waypoint.x - bateau.x;
-    MatWaypoint.y = waypoint.y - bateau.y;
+    float NordMatWaypoint = calcul_angle_NordMatWaypoint(waypoint, bateau);
 
-    float NordMatWaypoint;
-    float scalaire = (MatNord.x * MatWaypoint.x) + (MatNord.y * MatWaypoint.y);
-
-    float normeMB = calcul_norme_vecteur(MatWaypoint);
-    float normeMN = calcul_norme_vecteur(MatNord);
-
-    NordMatWaypoint = scalaire/(normeMB * normeMN);
-    NordMatWaypoint = acosf(NordMatWaypoint)*180/M_PI;
-
-    // printf("NordMatBouee = %f\n", NordMatBouee);
     float AvantMatWaypoint = NordMatWaypoint - bateau_orientation;
-    printf("angle_bateau_waypoint = %f\n", AvantMatWaypoint);
+    
+    // printf("angle_bateau_waypoint = %f\n", AvantMatWaypoint);
 
     float cmd_safran = 0;
 
@@ -167,21 +192,8 @@ int decision_strategie(struct point Bouee, struct point Mat, float VMA, float NM
 {
     int retour = 0;
 
-    struct vecteur MatNord = {0, 1};
-    struct vecteur MatBouee;
-    MatBouee.x = Bouee.x - Mat.x;
-    MatBouee.y = Bouee.y - Mat.y;
+    float NordMatBouee = calcul_angle_NordMatWaypoint(Bouee, Mat);
 
-    float NordMatBouee;
-    float scalaire = (MatNord.x * MatBouee.x) + (MatNord.y * MatBouee.y);
-
-    float normeMB = calcul_norme_vecteur(MatBouee);
-    float normeMN = calcul_norme_vecteur(MatNord);
-
-    NordMatBouee = scalaire/(normeMB * normeMN);
-    NordMatBouee = acosf(NordMatBouee)*180/M_PI;
-
-    // printf("NordMatBouee = %f\n", NordMatBouee);
     float VentMatBouee;
     VentMatBouee = VMA - (NordMatBouee - NMA);
 
@@ -207,6 +219,8 @@ struct point navigation(int statregie)
 {
 
 }
+
+
 struct cmd pilotage(struct point waypoint, struct point bateau, float VMA, float NMA)
 {
     struct cmd pilote;
@@ -274,7 +288,7 @@ int main(void)
   
     // Positions de l'objectif et du bateau 
     Bouee.x= 6;
-    Bouee.y = 5;
+    Bouee.y = 0;
     
     Mat.x= 0;
     Mat.y = 0;
