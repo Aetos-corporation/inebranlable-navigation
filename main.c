@@ -40,9 +40,29 @@ float distance(struct point p1, struct point p2) {
     return dist;
 }
 
+// Fonction pour convertir la valeur d'un angle entre [0; 360] sur [-180; 180]
+float conversion_angle_360_180(float angle)
+{
+    float angle_conv;
+    if(angle < 180)
+    {
+        angle_conv = angle;
+    }
+    else if(angle > 180)
+    {
+        angle_conv = -(360 - angle);
+    }
+    else
+    {
+        angle_conv = 180;
+    }
+
+    return angle_conv;
+}
+
 // Fonction qui calcule l'angle entre le Nord, le bateau et la bouee :
-// [IN] struc point waypoint : coordonnees de la Bouee 
-// [IN] struc point bateau : les coordonnees du Bateau 
+// [IN] struct point waypoint : coordonnees de la Bouee 
+// [IN] struct point bateau : les coordonnees du Bateau 
 // [OUT] float NordMatWaypoint : angle Nord Bateau Bouee
 float calcul_angle_NordMatWaypoint(struct point waypoint, struct point bateau)
 {
@@ -95,12 +115,85 @@ float calcul_angle_EstMatAvant(float nordMatAvant)
     return EstMatAvant;
 }
 
-// float calcul_angle_VentMatBouee(float EstMatAvant, struct point Bateau, struct point Bouee)
-// {
-//     struct vecteur AvantVent;
+// Fonction qui calcule l'angle entre le Vent, le Bateau et la Bouee :
+// [IN] float ventMatAvant : angle donnee par la girouette
+// [IN] float nordMatAvant : angle entre le Nord, le Mat et Avant du bateau
+// [IN] struct point bateau : les coordonnees du Bateau 
+// [IN] struct point bouee : les coordonnees de la Bouee 
+// [OUT] float VentMatBouee : angle entre le Vent, le Mat et la Bouee
+float calcul_angle_VentMatBouee(struct point bouee, struct point bateau, float ventMatAvant, float nordMatAvant)
+{   
+    float VentMatBouee; 
 
-//     AvantVent.x = 
-// }
+    // Convertion de l'angle donne par la girouette sur -180/180 par rapport a la direction du bateau
+    float AvantMatVent = conversion_angle_360_180(ventMatAvant);
+    printf("AvantMatVent = %f\n", AvantMatVent);
+
+    // VMB = AMV - AMB 
+    float NordMatBouee = calcul_angle_NordMatWaypoint(bouee, bateau);
+    float AvantMatBouee = NordMatBouee - nordMatAvant;
+
+    if(AvantMatBouee < 0)
+    {
+        AvantMatBouee = 360 + AvantMatBouee;
+    }
+    printf("AvantMatBouee = %f\n", AvantMatBouee);
+
+    if(AvantMatVent < 0)
+    {
+        if( (-AvantMatVent) < AvantMatBouee)
+        {
+            VentMatBouee = AvantMatBouee - (-AvantMatVent);
+        }
+        else 
+        {
+            VentMatBouee = 360 -(-AvantMatVent) + AvantMatBouee; 
+        }
+    }
+    else 
+    {
+        if( (360-AvantMatVent) > AvantMatBouee)
+        {
+            VentMatBouee = AvantMatVent + AvantMatBouee;
+        }
+        else
+        {
+            VentMatBouee = AvantMatBouee - (360 - AvantMatVent);
+        }
+    }
+
+
+    printf("VentMatBouee 1 = %f\n", VentMatBouee);
+
+    // VentMatBouee = AvantMatVent - AvantMatBouee;
+
+    // if(VentMatBouee > 360)
+    // {
+    //     VentMatBouee = VentMatBouee - 360;
+    // }
+    // else if(VentMatBouee < -360)
+    // {
+    //     VentMatBouee = -(360 + VentMatBouee);
+    // }
+
+    // printf("VentMatBouee 2 = %f\n", VentMatBouee);
+
+    // if(AvantMatVent > 0)
+    // {
+    //     if(VentMatBouee < 0)
+    //     {
+    //         VentMatBouee = -VentMatBouee;
+    //     }
+    //     else 
+    //     {
+    //         VentMatBouee = 360 - VentMatBouee;
+    //     }
+    // }
+
+    // printf("VentMatBouee 3 = %f\n", VentMatBouee);
+
+    return VentMatBouee;
+}
 
 // Fonction qui calcule l'angle de la voile
 // [IN] float ventMatAvant : angle qui donne la provenance du vent par rapport au bateau (180 = vente arriere)
@@ -138,8 +231,8 @@ float calcul_angle_voile(float ventMatAvant)
 }
 
 // Fonction qui calcule l'angle du safran
-// [IN] struc point waypoint : coordonnees de la bouee 
-// [IN] struc point bateau : les coordonnees du bateau 
+// [IN] struct point waypoint : coordonnees de la bouee 
+// [IN] struct point bateau : les coordonnees du bateau 
 // [IN] float bateau_orientation : orientation du bateau en degres par rapport au nord
 // [OUT] float cmd_safran : commande d'angle a adopter au safran
 float calcul_angle_safran(struct point waypoint, struct point bateau, float bateau_orientation)
@@ -206,17 +299,9 @@ int decision_strategie(struct point bouee, struct point mat, float ventMatAvant,
 {
     int retour = 0;
 
-    float NordMatBouee = calcul_angle_NordMatWaypoint(bouee, mat);
-
-    // HCO : Ne fonctionne pas !! A corriger 
+    // HCO : Fonctionne mais finir de tester tous les cas possibles 
     float VentMatBouee;
-    VentMatBouee = ventMatAvant - (NordMatBouee - nordMatAvant);
-
-    if(VentMatBouee > 360)
-    {
-        VentMatBouee = VentMatBouee - 360;
-    }
-
+    VentMatBouee = calcul_angle_VentMatBouee(bouee, mat, ventMatAvant, nordMatAvant);
     // printf("VentMatBouee = %f\n", VentMatBouee);
     
     if(VentMatBouee < 30 || VentMatBouee > 330)
@@ -238,7 +323,7 @@ int decision_strategie(struct point bouee, struct point mat, float ventMatAvant,
 // [IN] struct point bouee : bouee ou point d'arrivee a atteindre par defaut
 // [IN] struct point bateau : position du Bateau
 // [OUT] struct point waypoint : ojectif a atteindre
-struct point navigation(int statregie, float ventMatAvant, float nordMatAvant, struct point bouee, struct point bateau)
+struct point navigation(struct point bouee, struct point bateau, int statregie, float ventMatAvant, float nordMatAvant)
 {
     struct point waypoint;
     
@@ -254,12 +339,11 @@ struct point navigation(int statregie, float ventMatAvant, float nordMatAvant, s
 
         // Calculer la droite qui a un angle de 40° par rapport au vent 
         float NordMatBouee = calcul_angle_NordMatWaypoint(bouee, bateau);
-
         // printf("NordMatBouee = %f\n", NordMatBouee);
 
-        // HCO : Ne fonctionne pas !! A corriger 
+        // HCO : Fonctionne, mais reste à tester tous les cas possibles
         float VentMatBouee;
-        VentMatBouee = ventMatAvant - (NordMatBouee - nordMatAvant);
+        VentMatBouee = calcul_angle_VentMatBouee(bouee, bateau, ventMatAvant, nordMatAvant);
         // printf("VentMatBouee = %f\n", VentMatBouee);
 
         float BoueeMatWaypoint;
@@ -336,19 +420,19 @@ int main(void)
     printf("*******************************************************\n\n");
 
     // Positions de l'objectif et du bateau 
-    struct point Bouee = {-20, 20};
-    struct point Mat = {0, 0};
+    struct point Bouee = {0, 0};
+    struct point Mat = {2, 2};
 
     //Les angles sont donnés sur [0, 360]
-    float VentMatAvant = 60.26;
-    float NordMatAvant = 326.54;
+    float VentMatAvant = 143.23;
+    float NordMatAvant = 296.67;
 
 
 
-    // // Test de la fonction decision_strategie
-    // printf("**********************************************\n");
-    // printf("*** Test de la fonction decision_strategie ***\n");
-    // printf("**********************************************\n\n");
+    // Test de la fonction decision_strategie
+    printf("**********************************************\n");
+    printf("*** Test de la fonction decision_strategie ***\n");
+    printf("**********************************************\n\n");
 
     int strategie = decision_strategie(Bouee, Mat, VentMatAvant, NordMatAvant);
 
@@ -375,7 +459,7 @@ int main(void)
     printf("\n\n");
 
 
-    // Test de la fonction navigation 
+    // // Test de la fonction navigation 
     // printf("************************************\n");
     // printf("*** Test de la fonction navigation ***\n");
     // printf("************************************\n\n");
@@ -393,7 +477,7 @@ int main(void)
 
     // int strategie = 1;
 
-    // struct point Waypoint = navigation(strategie, VentMatAvant, NordMatAvant, Bouee, Mat);
+    // struct point Waypoint = navigation(Bouee, Mat, strategie, VentMatAvant, NordMatAvant);
 
     // printf("Waypoint.x : %f\n", Waypoint.x);
     // printf("Waypoint.y : %f\n", Waypoint.y);
