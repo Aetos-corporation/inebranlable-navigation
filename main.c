@@ -60,6 +60,27 @@ float conversion_angle_360_180(float angle)
     return angle_conv;
 }
 
+// Fonction qui vérifie la distance avec la bouée
+// [IN] struct point bouee : coordonnees de la Bouee
+// [IN] struct point bateau : les coordonnees du Bateau
+// [IN] float seuil : seuil où on considère que le bateau est arrivé à la bouée
+// [OUT] bool : true si la distance est inférieure au seuil, false sinon
+bool verif_distance_bouee(struct point bouee, struct point bateau, float* seuil)
+{
+    bool distance_bouee = false;
+    float dist = distance(bouee, bateau);
+    if(dist <= *seuil)
+    {
+        distance_bouee = true;
+    }
+    else
+    {
+        *seuil += 0.2;
+    }
+    return distance_bouee;
+}
+
+
 // Fonction qui calcule l'angle entre le Nord, le bateau et la bouee :
 // [IN] struct point waypoint : coordonnees de la Bouee 
 // [IN] struct point bateau : les coordonnees du Bateau 
