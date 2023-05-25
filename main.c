@@ -146,19 +146,23 @@ float calcul_angle_VentMatBouee(struct point bouee, struct point bateau, float v
 {   
     float VentMatBouee; 
 
+    float NordMatBouee = calcul_angle_NordMatWaypoint(bouee, bateau);
+    // printf("nordMatAvant = %f\n", nordMatAvant);
+
+    float AvantMatBouee = 0;
+    if(nordMatAvant > NordMatBouee)
+    {
+        AvantMatBouee = (360 - nordMatAvant) + NordMatBouee;
+    }
+    else
+    {
+        AvantMatBouee = NordMatBouee - nordMatAvant;
+    }
+    // printf("AvantMatBouee = %f\n", AvantMatBouee);
+
     // Convertion de l'angle donne par la girouette sur -180/180 par rapport a la direction du bateau
     float AvantMatVent = conversion_angle_360_180(ventMatAvant);
-    printf("AvantMatVent = %f\n", AvantMatVent);
-
-    // VMB = AMV - AMB 
-    float NordMatBouee = calcul_angle_NordMatWaypoint(bouee, bateau);
-    float AvantMatBouee = NordMatBouee - nordMatAvant;
-
-    if(AvantMatBouee < 0)
-    {
-        AvantMatBouee = 360 + AvantMatBouee;
-    }
-    printf("AvantMatBouee = %f\n", AvantMatBouee);
+    // printf("AvantMatVent = %f\n", AvantMatVent);
 
     if(AvantMatVent < 0)
     {
@@ -182,36 +186,7 @@ float calcul_angle_VentMatBouee(struct point bouee, struct point bateau, float v
             VentMatBouee = AvantMatBouee - (360 - AvantMatVent);
         }
     }
-
-
-    printf("VentMatBouee 1 = %f\n", VentMatBouee);
-
-    // VentMatBouee = AvantMatVent - AvantMatBouee;
-
-    // if(VentMatBouee > 360)
-    // {
-    //     VentMatBouee = VentMatBouee - 360;
-    // }
-    // else if(VentMatBouee < -360)
-    // {
-    //     VentMatBouee = -(360 + VentMatBouee);
-    // }
-
-    // printf("VentMatBouee 2 = %f\n", VentMatBouee);
-
-    // if(AvantMatVent > 0)
-    // {
-    //     if(VentMatBouee < 0)
-    //     {
-    //         VentMatBouee = -VentMatBouee;
-    //     }
-    //     else 
-    //     {
-    //         VentMatBouee = 360 - VentMatBouee;
-    //     }
-    // }
-
-    // printf("VentMatBouee 3 = %f\n", VentMatBouee);
+    // printf("VentMatBouee = %f\n", VentMatBouee);
 
     return VentMatBouee;
 }
@@ -225,10 +200,6 @@ float calcul_angle_voile(float ventMatAvant)
     if(ventMatAvant > 180)
     {
         ventMatAvant = 360 - ventMatAvant;
-    }
-    else 
-    {
-        ventMatAvant = ventMatAvant;
     }
 
     if(ventMatAvant >= 150)
@@ -262,7 +233,6 @@ float calcul_angle_safran(struct point waypoint, struct point bateau, float bate
     float NordMatWaypoint = calcul_angle_NordMatWaypoint(waypoint, bateau);
 
     float AvantMatWaypoint = NordMatWaypoint - bateau_orientation;
-    
     // printf("angle_bateau_waypoint = %f\n", AvantMatWaypoint);
 
     float cmd_safran = 0;
@@ -309,7 +279,6 @@ float calcul_angle_safran(struct point waypoint, struct point bateau, float bate
 }
 
 
-
 // Fonction qui calcule la decision de strategie, entre aller tout droit ou tirer des bords
 // [IN] struct point bouee : coordonnees de la bouee a viser
 // [IN] struct point mat : coordonees du bateau
@@ -319,10 +288,7 @@ float calcul_angle_safran(struct point waypoint, struct point bateau, float bate
 int decision_strategie(struct point bouee, struct point mat, float ventMatAvant, float nordMatAvant)
 {
     int retour = 0;
-
-    // HCO : Fonctionne mais finir de tester tous les cas possibles 
-    float VentMatBouee;
-    VentMatBouee = calcul_angle_VentMatBouee(bouee, mat, ventMatAvant, nordMatAvant);
+    float VentMatBouee = calcul_angle_VentMatBouee(bouee, mat, ventMatAvant, nordMatAvant);
     // printf("VentMatBouee = %f\n", VentMatBouee);
     
     if(VentMatBouee < 30 || VentMatBouee > 330)
@@ -337,6 +303,7 @@ int decision_strategie(struct point bouee, struct point mat, float ventMatAvant,
     return retour;
 }
 
+
 // Fonction qui donne un objectif (bouee) a atteindre au bateau en fonction de la strategie
 // [IN] int strategie : strategie de navigation
 // [IN] float ventMatAvant : angle entre le vent, le mat et l'avant du bateau
@@ -346,53 +313,42 @@ int decision_strategie(struct point bouee, struct point mat, float ventMatAvant,
 // [OUT] struct point waypoint : ojectif a atteindre
 struct point navigation(struct point bouee, struct point bateau, int statregie, float ventMatAvant, float nordMatAvant)
 {
-    struct point waypoint;
+    // Par defaut, on vise comme objectif la bouee (ou le ponton si sur le retour)
+    struct point waypoint = bouee;
     
-    if(statregie == 2)
-    {
-        // Cas nominal, on vise l'objectif directement
-        waypoint = bouee;
-    }
-    else if (statregie == 1)
+    if (statregie == 1)
     {
         // Il faut tirer des bords, on doit donc générer des waypoint virtuels pour avancer vers l'objectif
         float dist_bateau_bouee = distance(bateau, bouee);
+        // printf("dist_bateau_bouee = %f\n", dist_bateau_bouee);
 
         // Calculer la droite qui a un angle de 40° par rapport au vent 
         float NordMatBouee = calcul_angle_NordMatWaypoint(bouee, bateau);
         // printf("NordMatBouee = %f\n", NordMatBouee);
 
-        // HCO : Fonctionne, mais reste à tester tous les cas possibles
-        float VentMatBouee;
-        VentMatBouee = calcul_angle_VentMatBouee(bouee, bateau, ventMatAvant, nordMatAvant);
+        float VentMatBouee = calcul_angle_VentMatBouee(bouee, bateau, ventMatAvant, nordMatAvant);
         // printf("VentMatBouee = %f\n", VentMatBouee);
 
-        float BoueeMatWaypoint;
-        
+        float BoueeMatWaypoint = 0;
         if(VentMatBouee < 30)
         {
-            BoueeMatWaypoint = 360 - (45 - VentMatBouee);
+            BoueeMatWaypoint = 40 - VentMatBouee;
         }
         else if (VentMatBouee > 330)
         {
-            BoueeMatWaypoint = 45 - (360 - VentMatBouee);
+            BoueeMatWaypoint = 360 - (40 - (360 - VentMatBouee));
         }
         // printf("BoueeMatWaypoint = %f\n", BoueeMatWaypoint);
         
-        float NordMatWaypoint;
-
-        if(BoueeMatWaypoint < NordMatBouee)
+        float NordMatWaypoint = NordMatBouee + BoueeMatWaypoint;
+        if(NordMatWaypoint > 360)
         {
-            NordMatWaypoint = NordMatBouee - BoueeMatWaypoint;
-        }
-        else
-        {
-            NordMatWaypoint = BoueeMatWaypoint - NordMatBouee;
+            NordMatWaypoint = NordMatBouee - (360 - BoueeMatWaypoint);
         }
         // printf("NordMatWaypoint = %f\n", NordMatWaypoint);
 
         // Définition de l'angle en fonction de l'axe des abscisses (le Nord étant l'axe des ordonnés)
-        float XMatWaypoint;
+        float XMatWaypoint = 0;
         if(NordMatWaypoint >= 270)
         {
             XMatWaypoint = NordMatWaypoint - 270;
@@ -401,14 +357,18 @@ struct point navigation(struct point bouee, struct point bateau, int statregie, 
         {
             XMatWaypoint = NordMatWaypoint  + 90;
         }
-        
+
+        // printf("XMatWaypoint = %f\n", XMatWaypoint);
+        // Passage de l'angle en radian
+        XMatWaypoint = XMatWaypoint * (M_PI/180);
+
         waypoint.x = bateau.x + (1.5 * dist_bateau_bouee) * cosf(XMatWaypoint);
         waypoint.y = bateau.y + (1.5 * dist_bateau_bouee) * sinf(XMatWaypoint);
     }
 
-
     return waypoint;
 }
+
 
 // Fonction qui assure le pilotage de la voile et du safran du bateau
 // [IN] struct point Waypoint : ojectif a atteindre
@@ -441,43 +401,42 @@ int main(void)
     printf("*******************************************************\n\n");
 
     // Positions de l'objectif et du bateau 
-    struct point Bouee = {0, 0};
+    struct point Bouee = {7, 2};
     struct point Mat = {2, 2};
 
     //Les angles sont donnés sur [0, 360]
-    float VentMatAvant = 143.23;
+    float VentMatAvant = 180.10;
     float NordMatAvant = 296.67;
 
 
+    // // Test de la fonction decision_strategie
+    // printf("**********************************************\n");
+    // printf("*** Test de la fonction decision_strategie ***\n");
+    // printf("**********************************************\n\n");
 
-    // Test de la fonction decision_strategie
-    printf("**********************************************\n");
-    printf("*** Test de la fonction decision_strategie ***\n");
-    printf("**********************************************\n\n");
+    // int strategie = decision_strategie(Bouee, Mat, VentMatAvant, NordMatAvant);
 
-    int strategie = decision_strategie(Bouee, Mat, VentMatAvant, NordMatAvant);
+    // printf("decision: %d\n", strategie);
+    // switch (strategie)
+    // {
+    // case 0:
+    //     printf("decision_strategie : failed\n");
 
-    printf("decision: %d\n", strategie);
-    switch (strategie)
-    {
-    case 0:
-        printf("decision_strategie : failed\n");
-
-        break;
-    case 1:
-        printf("decision_strategie : tirer des bords\n");
-        break;
+    //     break;
+    // case 1:
+    //     printf("decision_strategie : tirer des bords\n");
+    //     break;
     
-    case 2:
-        printf("decision_strategie : nominal\n");
-        break;
+    // case 2:
+    //     printf("decision_strategie : nominal\n");
+    //     break;
     
-    default:
-        printf("decision_strategie : valeur de retour inconnue\n");
-        break;
-    }
+    // default:
+    //     printf("decision_strategie : valeur de retour inconnue\n");
+    //     break;
+    // }
 
-    printf("\n\n");
+    // printf("\n\n");
 
 
     // // Test de la fonction navigation 
@@ -486,15 +445,15 @@ int main(void)
     // printf("************************************\n\n");
 
     // // Positions de l'objectif 
-    // Bouee.x= 5;
-    // Bouee.y = 3;
+    // Bouee.x= 7;
+    // Bouee.y = 2;
 
-    // Mat.x= 0;
-    // Mat.y = 0;
+    // Mat.x= 2;
+    // Mat.y = 2;
 
     // //Les angles sont donnés sur [0, 360]
-    // VentMatAvant = 153.43;
-    // NordMatAvant = 90;
+    // VentMatAvant = 37.98;
+    // NordMatAvant = 296.67;
 
     // int strategie = 1;
 
@@ -506,27 +465,27 @@ int main(void)
     // printf("\n\n");
 
 
-    // // Test de la fonction pilotage
-    // printf("************************************\n");
-    // printf("*** Test de la fonction pilotage ***\n");
-    // printf("************************************\n\n");
+    // Test de la fonction pilotage
+    printf("************************************\n");
+    printf("*** Test de la fonction pilotage ***\n");
+    printf("************************************\n\n");
   
-    // // Positions de l'objectif et du bateau 
-    // Bouee.x= 6;
-    // Bouee.y = 0;
+    // Positions de l'objectif et du bateau 
+    Bouee.x= 6;
+    Bouee.y = 0;
     
-    // Mat.x= 0;
-    // Mat.y = 0;
+    Mat.x= 0;
+    Mat.y = 0;
 
-    // //Les angles sont donnés sur [0, 360]
-    // VentMatAvant = 135;
-    // NordMatAvant = 180;
+    //Les angles sont donnés sur [0, 360]
+    VentMatAvant = 135;
+    NordMatAvant = 180;
 
-    // struct cmd pilotage_bateau = pilotage(Bouee, Mat, VentMatAvant, NordMatAvant);
+    struct cmd pilotage_bateau = pilotage(Bouee, Mat, VentMatAvant, NordMatAvant);
 
-    // printf("L'angle de voile a adopter est : %f\n", pilotage_bateau.voile);
-    // printf("L'angle de safran a adopter est : %f\n", pilotage_bateau.safran);
+    printf("L'angle de voile a adopter est : %f\n", pilotage_bateau.voile);
+    printf("L'angle de safran a adopter est : %f\n", pilotage_bateau.safran);
 
-    // printf("\n\n");
+    printf("\n\n");
 
 }
